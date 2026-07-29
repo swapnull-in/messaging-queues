@@ -1,0 +1,215 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Webhook Delivery — Queue Dashboard</title>
+  <style>
+    :root {
+      --bg: #0e1116; --panel: #161b22; --panel2: #1c222b; --border: #2a313c;
+      --text: #e6edf3; --muted: #8b949e; --accent: #4c9eff; --accent2: #1f6feb;
+      --green: #3fb950; --amber: #d29922; --red: #f85149; --blue: #58a6ff; --grey: #6e7681;
+    }
+    @media (prefers-color-scheme: light) {
+      :root {
+        --bg: #f6f8fa; --panel: #ffffff; --panel2: #f0f3f6; --border: #d0d7de;
+        --text: #1f2328; --muted: #656d76; --accent: #0969da; --accent2: #0860ca;
+        --green: #1a7f37; --amber: #9a6700; --red: #cf222e; --blue: #0969da; --grey: #6e7681;
+      }
+    }
+    * { box-sizing: border-box; }
+    body { margin: 0; background: var(--bg); color: var(--text);
+      font: 14px/1.5 -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif; }
+    header { padding: 20px 24px; border-bottom: 1px solid var(--border); background: var(--panel); }
+    header h1 { margin: 0; font-size: 18px; }
+    header p { margin: 4px 0 0; color: var(--muted); font-size: 13px; }
+    .wrap { max-width: 1100px; margin: 0 auto; padding: 24px; display: grid;
+      grid-template-columns: 360px 1fr; gap: 24px; }
+    @media (max-width: 860px) { .wrap { grid-template-columns: 1fr; } }
+    .panel { background: var(--panel); border: 1px solid var(--border); border-radius: 10px; padding: 18px; }
+    .panel h2 { margin: 0 0 14px; font-size: 14px; text-transform: uppercase;
+      letter-spacing: .04em; color: var(--muted); }
+    label { display: block; font-size: 12px; color: var(--muted); margin: 12px 0 4px; }
+    input, textarea, select { width: 100%; background: var(--panel2); color: var(--text);
+      border: 1px solid var(--border); border-radius: 6px; padding: 8px 10px; font: inherit; }
+    textarea { font-family: ui-monospace, SFMono-Regular, Menlo, monospace; min-height: 72px; resize: vertical; }
+    .presets { display: flex; gap: 6px; margin-top: 6px; flex-wrap: wrap; }
+    .presets button { flex: 1; font-size: 11px; padding: 6px 4px; }
+    button { background: var(--panel2); color: var(--text); border: 1px solid var(--border);
+      border-radius: 6px; padding: 9px 14px; font: inherit; cursor: pointer; }
+    button:hover { border-color: var(--accent); }
+    button.primary { background: var(--accent2); border-color: var(--accent2); color: #fff; width: 100%; margin-top: 16px; font-weight: 600; }
+    button.primary:hover { filter: brightness(1.1); }
+    .stats { display: grid; grid-template-columns: repeat(3, 1fr); gap: 10px; margin-bottom: 20px; }
+    .stat { background: var(--panel); border: 1px solid var(--border); border-radius: 10px; padding: 14px; text-align: center; }
+    .stat .n { font-size: 24px; font-weight: 700; }
+    .stat .l { font-size: 11px; color: var(--muted); text-transform: uppercase; letter-spacing: .04em; margin-top: 2px; }
+    table { width: 100%; border-collapse: collapse; font-size: 13px; }
+    th { text-align: left; color: var(--muted); font-weight: 500; font-size: 11px;
+      text-transform: uppercase; letter-spacing: .04em; padding: 6px 8px; border-bottom: 1px solid var(--border); }
+    td { padding: 8px; border-bottom: 1px solid var(--border); vertical-align: top; }
+    td.mono { font-family: ui-monospace, Menlo, monospace; font-size: 12px; color: var(--muted); }
+    .badge { display: inline-block; padding: 2px 8px; border-radius: 20px; font-size: 11px; font-weight: 600; }
+    .b-completed { background: color-mix(in srgb, var(--green) 20%, transparent); color: var(--green); }
+    .b-failed { background: color-mix(in srgb, var(--red) 20%, transparent); color: var(--red); }
+    .b-active { background: color-mix(in srgb, var(--blue) 20%, transparent); color: var(--blue); }
+    .b-waiting, .b-delayed { background: color-mix(in srgb, var(--amber) 20%, transparent); color: var(--amber); }
+    .empty { color: var(--muted); padding: 18px; text-align: center; font-style: italic; }
+    .toast { position: fixed; bottom: 20px; right: 20px; background: var(--panel); border: 1px solid var(--accent);
+      border-radius: 8px; padding: 12px 16px; box-shadow: 0 6px 24px rgba(0,0,0,.3); opacity: 0;
+      transform: translateY(8px); transition: .2s; pointer-events: none; }
+    .toast.show { opacity: 1; transform: translateY(0); }
+    .hint { font-size: 12px; color: var(--muted); margin-top: 10px; }
+    .dot { display: inline-block; width: 8px; height: 8px; border-radius: 50%; background: var(--green); margin-right: 6px; }
+    section { margin-bottom: 24px; }
+    section > h2 { font-size: 13px; text-transform: uppercase; letter-spacing: .04em; color: var(--muted); margin: 0 0 10px; }
+  </style>
+</head>
+<body>
+  <header>
+    <h1>Webhook Delivery — Queue Dashboard</h1>
+    <p><span class="dot"></span>Queue jobs, watch them retry, back off, and hit the dead-letter queue — live.</p>
+  </header>
+
+  <div class="wrap">
+    <!-- LEFT: producer form -->
+    <div class="panel">
+      <h2>Send a delivery</h2>
+      <label>Target URL</label>
+      <input id="url" value="http://localhost:4000/hook" />
+      <div class="presets">
+        <button type="button" data-url="http://localhost:4000/hook">flaky</button>
+        <button type="button" data-url="http://localhost:4000/always-fail">always-fail</button>
+        <button type="button" data-url="http://localhost:4000/ok">ok</button>
+      </div>
+
+      <label>Event</label>
+      <input id="event" value="order.created" />
+
+      <label>Payload (JSON)</label>
+      <textarea id="payload">{ "orderId": 42 }</textarea>
+
+      <label>Idempotency-Key (optional — reuse to dedupe)</label>
+      <input id="idem" placeholder="e.g. order-42-created" />
+
+      <button class="primary" id="send">Queue delivery →</button>
+      <p class="hint">Needs the worker (<code>npm run app:worker</code>) and target
+        (<code>npm run app:target</code>) running to actually deliver.</p>
+    </div>
+
+    <!-- RIGHT: live state -->
+    <div>
+      <div class="stats" id="stats"></div>
+
+      <section>
+        <h2>Recent deliveries</h2>
+        <div class="panel" style="padding:6px 10px;">
+          <table>
+            <thead><tr><th>ID</th><th>State</th><th>Target</th><th>Event</th><th>Attempts</th></tr></thead>
+            <tbody id="deliveries"></tbody>
+          </table>
+          <div class="empty" id="deliveries-empty" style="display:none">No deliveries yet — send one on the left.</div>
+        </div>
+      </section>
+
+      <section>
+        <h2>☠ Dead-letter queue</h2>
+        <div class="panel" style="padding:6px 10px;">
+          <table>
+            <thead><tr><th>ID</th><th>Target</th><th>Event</th><th>Error</th></tr></thead>
+            <tbody id="dlq"></tbody>
+          </table>
+          <div class="empty" id="dlq-empty">Nothing dead-lettered — nice.</div>
+        </div>
+      </section>
+    </div>
+  </div>
+
+  <div class="toast" id="toast"></div>
+
+  <script>
+    const $ = (id) => document.getElementById(id);
+
+    // Preset URL buttons
+    document.querySelectorAll(".presets button").forEach((b) =>
+      b.addEventListener("click", () => ($("url").value = b.dataset.url)));
+
+    function toast(msg) {
+      const t = $("toast");
+      t.textContent = msg; t.classList.add("show");
+      setTimeout(() => t.classList.remove("show"), 2500);
+    }
+
+    // Submit a delivery
+    $("send").addEventListener("click", async () => {
+      let payload;
+      try { payload = JSON.parse($("payload").value || "{}"); }
+      catch { return toast("Payload is not valid JSON"); }
+
+      const headers = { "content-type": "application/json" };
+      if ($("idem").value.trim()) headers["idempotency-key"] = $("idem").value.trim();
+
+      try {
+        const r = await fetch("/webhooks", {
+          method: "POST", headers,
+          body: JSON.stringify({ url: $("url").value, event: $("event").value, payload }),
+        });
+        const data = await r.json();
+        if (r.ok) { toast(`Queued delivery #${data.id}`); refresh(); }
+        else toast(data.error || "Error");
+      } catch { toast("Could not reach the API server"); }
+    });
+
+    const STAT_DEFS = [
+      ["waiting", "Waiting"], ["active", "Active"], ["delayed", "Delayed (backoff)"],
+      ["completed", "Completed"], ["failed", "Failed"], ["dead", "Dead-letter"],
+    ];
+
+    function renderStats(s) {
+      $("stats").innerHTML = STAT_DEFS.map(([k, label]) =>
+        `<div class="stat"><div class="n">${s[k] ?? 0}</div><div class="l">${label}</div></div>`).join("");
+    }
+
+    function badge(state) { return `<span class="badge b-${state}">${state}</span>`; }
+
+    function renderDeliveries(rows) {
+      $("deliveries-empty").style.display = rows.length ? "none" : "block";
+      $("deliveries").innerHTML = rows.map((r) => `
+        <tr>
+          <td class="mono">${r.id}</td>
+          <td>${badge(r.state)}</td>
+          <td class="mono">${(r.target || "").replace("http://localhost:4000", "")}</td>
+          <td>${r.event || ""}</td>
+          <td>${r.attemptsMade}${r.failedReason ? ` · <span style="color:var(--red)">${r.failedReason}</span>` : ""}</td>
+        </tr>`).join("");
+    }
+
+    function renderDlq(rows) {
+      $("dlq-empty").style.display = rows.length ? "none" : "block";
+      $("dlq").innerHTML = rows.map((r) => `
+        <tr>
+          <td class="mono">${r.id}</td>
+          <td class="mono">${(r.target || "").replace("http://localhost:4000", "")}</td>
+          <td>${r.event || ""}</td>
+          <td style="color:var(--red)">${r.error || ""}</td>
+        </tr>`).join("");
+    }
+
+    async function refresh() {
+      try {
+        const [stats, deliveries, dlq] = await Promise.all([
+          fetch("/api/stats").then((r) => r.json()),
+          fetch("/api/deliveries").then((r) => r.json()),
+          fetch("/api/dead-letter").then((r) => r.json()),
+        ]);
+        renderStats(stats);
+        renderDeliveries(deliveries);
+        renderDlq(dlq);
+      } catch { /* server not up yet — keep trying */ }
+    }
+
+    refresh();
+    setInterval(refresh, 1500); // live polling
+  </script>
+</body>
+</html>
