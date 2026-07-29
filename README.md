@@ -35,17 +35,37 @@ Run them in order. Each one prints a timestamped log so you can watch what happe
 | `npm run phase3` | **Idempotency** — safely handling a message that arrives twice |
 | `npm run phase4` | **Scheduling** — delayed, repeatable (cron), and rate-limited jobs |
 | `npm run phase5` | **RabbitMQ** — exchanges & routing: one event fanned out to many queues |
+| `npm run phase6` | **Kafka-style streaming** — the log, consumer groups, offsets, replay |
+| `npm run phase7` | **Pub/Sub** — fire-and-forget broadcast (no persistence, no acks) |
+| `npm run phase8` | **Priority queues** — urgent jobs jump the line |
 
 The code in `src/phase1/queue.ts` is the one to read first — it's the whole
 queue engine in ~150 commented lines.
 
-> **Phase 5 needs RabbitMQ** (a different broker from Redis) on `localhost:5672`:
+> **Phase 5 needs RabbitMQ** on `localhost:5672`:
 > ```bash
 > # macOS:   brew install rabbitmq && brew services start rabbitmq
 > # Docker:  docker run -d -p 5672:5672 rabbitmq
 > ```
 > It shows what a job queue like BullMQ *doesn't* do: publishing to an
 > **exchange** that routes one message to many subscriber queues by pattern.
+>
+> **Phase 6 needs a Kafka broker** on `localhost:9092`. Redpanda is a
+> single-container, Kafka-compatible option:
+> ```bash
+> docker run -d --name redpanda -p 9092:9092 \
+>   docker.redpanda.com/redpandadata/redpanda:latest \
+>   redpanda start --mode dev-container
+> ```
+> It shows the log-based model: messages are *retained*, so many consumer
+> groups can read (and replay) the same stream at their own offset.
+
+### Two families of tools
+
+- **Job queues** (Phases 1–4, 8; BullMQ) — deliver each message to *one* worker,
+  then delete it. For background *work*: emails, webhooks, image processing.
+- **Event brokers / streams** (Phases 5–7; RabbitMQ, Kafka, Pub/Sub) — distribute
+  *events* to many independent consumers. For *notifying* other systems.
 
 ### Phase 2 the "real" way (two terminals)
 
@@ -90,6 +110,9 @@ src/
   phase3/   idempotency
   phase4/   scheduling
   phase5/   RabbitMQ — exchanges & routing
+  phase6/   Kafka-style streaming (Redpanda)
+  phase7/   Redis Pub/Sub
+  phase8/   priority queues
   app/      the webhook delivery service + browser dashboard
 ```
 
