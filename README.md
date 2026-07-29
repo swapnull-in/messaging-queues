@@ -63,6 +63,8 @@ Then open **http://localhost:3000/** to try it in the browser: send deliveries,
 watch them retry and back off live, and see failed ones land in the dead-letter
 queue.
 
+![Webhook delivery dashboard](docs/dashboard.jpg)
+
 Prefer curl?
 
 ```bash
