@@ -11,6 +11,7 @@
     "phase2:demo": "node src/phase2/demo.ts",
     "phase3": "node src/phase3/idempotency.ts",
     "phase4": "node src/phase4/scheduling.ts",
+    "phase5": "node src/phase5/rabbitmq.ts",
     "app:server": "node src/app/server.ts",
     "app:worker": "node src/app/worker.ts",
     "app:target": "node src/app/test-target.ts",
@@ -21,6 +22,8 @@
     "typescript": "^5.7.0"
   },
   "dependencies": {
+    "@types/amqplib": "^0.10.8",
+    "amqplib": "^2.0.1",
     "bullmq": "^5.81.2"
   }
 }

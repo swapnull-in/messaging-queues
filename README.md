@@ -34,9 +34,18 @@ Run them in order. Each one prints a timestamped log so you can watch what happe
 | `npm run phase2:demo` | The same app on **BullMQ + Redis** (persistent, distributed) |
 | `npm run phase3` | **Idempotency** — safely handling a message that arrives twice |
 | `npm run phase4` | **Scheduling** — delayed, repeatable (cron), and rate-limited jobs |
+| `npm run phase5` | **RabbitMQ** — exchanges & routing: one event fanned out to many queues |
 
 The code in `src/phase1/queue.ts` is the one to read first — it's the whole
 queue engine in ~150 commented lines.
+
+> **Phase 5 needs RabbitMQ** (a different broker from Redis) on `localhost:5672`:
+> ```bash
+> # macOS:   brew install rabbitmq && brew services start rabbitmq
+> # Docker:  docker run -d -p 5672:5672 rabbitmq
+> ```
+> It shows what a job queue like BullMQ *doesn't* do: publishing to an
+> **exchange** that routes one message to many subscriber queues by pattern.
 
 ### Phase 2 the "real" way (two terminals)
 
@@ -80,6 +89,7 @@ src/
   phase2/   same app on BullMQ + Redis
   phase3/   idempotency
   phase4/   scheduling
+  phase5/   RabbitMQ — exchanges & routing
   app/      the webhook delivery service + browser dashboard
 ```
 
