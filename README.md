@@ -38,9 +38,20 @@ Run them in order. Each one prints a timestamped log so you can watch what happe
 | `npm run phase6` | **Kafka-style streaming** — the log, consumer groups, offsets, replay |
 | `npm run phase7` | **Pub/Sub** — fire-and-forget broadcast (no persistence, no acks) |
 | `npm run phase8` | **Priority queues** — urgent jobs jump the line |
+| `npm run phase9` | **Outbox & CDC** — the dual-write bug; transactional outbox + change-data-capture |
+| `npm run phase10` | **Event sourcing** — state is a fold of events; replay, time-travel, snapshots |
+| `npm run phase11` | **CQRS** — split writes from reads; many read models; the read-lag window |
+| `npm run phase12` | **Backpressure** — a fast producer vs a slow consumer; block, shed, or scale |
 
 The code in `src/phase1/queue.ts` is the one to read first — it's the whole
 queue engine in ~150 commented lines.
+
+> **Phases 9–12 need nothing installed** — they're dependency-free in-process
+> simulations (like Phase 1), so they run on plain Node with no Redis, RabbitMQ,
+> or Kafka. They cover the event-driven patterns a Staff interview turns on: the
+> transactional **outbox** (the single most important messaging pattern — never
+> dual-write to a DB and a broker), **event sourcing**, **CQRS**, and
+> **backpressure**.
 
 > **Phase 5 needs RabbitMQ** on `localhost:5672`:
 > ```bash
@@ -101,6 +112,22 @@ curl -X POST localhost:3000/webhooks -H 'content-type: application/json' \
   -d '{"url":"http://localhost:4000/hook","event":"order.created","payload":{"orderId":42}}'
 ```
 
+## Interactive Queue Lab
+
+Every phase is also a live instrument in the browser — watch a poison job retry
+then dead-letter, double-charge a card then dedupe it, race a fast producer past
+a slow consumer and pick block vs shed, key messages onto Kafka partitions and
+replay the log, and crash a dual-write then fix it with the outbox.
+
+```bash
+npm run web        # serves web/index.html at http://localhost:8080 (no deps)
+```
+
+One self-contained static page (self-hosted fonts), grouped by tier and
+deep-linkable. To host it on **Cloudflare Pages**: connect this repo in the
+dashboard with build output `web` (auto-deploys on push), or run
+`npx wrangler login` then `npm run deploy`.
+
 ## Project layout
 
 ```
@@ -113,7 +140,13 @@ src/
   phase6/   Kafka-style streaming (Redpanda)
   phase7/   Redis Pub/Sub
   phase8/   priority queues
+  phase9/   dual-write bug, transactional outbox, CDC
+  phase10/  event sourcing (state = fold of events)
+  phase11/  CQRS (write model + projected read models)
+  phase12/  backpressure (unbounded vs block vs shed)
   app/      the webhook delivery service + browser dashboard
+web/
+  index.html  ·  serve.mjs   (the interactive Queue Lab — npm run web)
 ```
 
 ## License

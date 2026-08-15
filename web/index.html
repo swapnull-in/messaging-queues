@@ -1,0 +1,713 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>Messaging — Queue Lab</title>
+<meta name="description" content="An interactive lab for messaging & event-driven systems: queues, visibility timeouts, retries, idempotency, priority, rate limiting, backpressure, pub/sub, routing, Kafka logs, outbox/CDC, event sourcing, and CQRS." />
+<meta name="theme-color" content="#faf9f6" media="(prefers-color-scheme: light)" />
+<meta name="theme-color" content="#0d0d13" media="(prefers-color-scheme: dark)" />
+<link rel="preload" href="fonts/space-grotesk-latin-600-normal.woff2" as="font" type="font/woff2" crossorigin />
+<link rel="preload" href="fonts/ibm-plex-sans-latin-400-normal.woff2" as="font" type="font/woff2" crossorigin />
+<link rel="preload" href="fonts/ibm-plex-mono-latin-400-normal.woff2" as="font" type="font/woff2" crossorigin />
+<style>
+  @font-face { font-family:"Space Grotesk"; font-style:normal; font-weight:500; font-display:swap; src:url(fonts/space-grotesk-latin-500-normal.woff2) format("woff2"); }
+  @font-face { font-family:"Space Grotesk"; font-style:normal; font-weight:600; font-display:swap; src:url(fonts/space-grotesk-latin-600-normal.woff2) format("woff2"); }
+  @font-face { font-family:"Space Grotesk"; font-style:normal; font-weight:700; font-display:swap; src:url(fonts/space-grotesk-latin-700-normal.woff2) format("woff2"); }
+  @font-face { font-family:"IBM Plex Sans"; font-style:normal; font-weight:400; font-display:swap; src:url(fonts/ibm-plex-sans-latin-400-normal.woff2) format("woff2"); }
+  @font-face { font-family:"IBM Plex Sans"; font-style:normal; font-weight:500; font-display:swap; src:url(fonts/ibm-plex-sans-latin-500-normal.woff2) format("woff2"); }
+  @font-face { font-family:"IBM Plex Sans"; font-style:normal; font-weight:600; font-display:swap; src:url(fonts/ibm-plex-sans-latin-600-normal.woff2) format("woff2"); }
+  @font-face { font-family:"IBM Plex Mono"; font-style:normal; font-weight:400; font-display:swap; src:url(fonts/ibm-plex-mono-latin-400-normal.woff2) format("woff2"); }
+  @font-face { font-family:"IBM Plex Mono"; font-style:normal; font-weight:500; font-display:swap; src:url(fonts/ibm-plex-mono-latin-500-normal.woff2) format("woff2"); }
+  :root {
+    --bg:#faf9f6; --panel:#ffffff; --panel-2:#f4f2ec; --sidebar-bg:#f4f2ec; --hover:#ebe9e1;
+    --ink:#191a20; --muted:#6c6d78; --line:#e7e3da;
+    --accent:#4b3bff; --accent-soft:#ecebff; --amber:#b96608; --amber-soft:#fbeed6;
+    --good:#0f9d6a; --good-soft:#e0f2ea; --warn:#b96608; --warn-soft:#fbeed6; --bad:#dd4650; --bad-soft:#fbe4e6; --info:#2f6db0;
+    --shadow:0 1px 2px rgba(24,20,40,.04), 0 10px 30px -16px rgba(24,20,40,.18);
+    --mono:"IBM Plex Mono", ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+    --sans:"IBM Plex Sans", -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+    --display:"Space Grotesk", var(--sans);
+  }
+  @media (prefers-color-scheme: dark) {
+    :root {
+      --bg:#0d0d13; --panel:#16161e; --panel-2:#1d1d27; --sidebar-bg:#0a0a10; --hover:#20202c;
+      --ink:#ecebf2; --muted:#9698a6; --line:#282833;
+      --accent:#907fff; --accent-soft:#211f36; --amber:#f0b45a; --amber-soft:#2a2216;
+      --good:#40d98c; --good-soft:#12261e; --warn:#f0b45a; --warn-soft:#2a2216; --bad:#ff6b72; --bad-soft:#2a141a; --info:#6ea8e0;
+      --shadow:0 1px 2px rgba(0,0,0,.3), 0 14px 34px -18px rgba(0,0,0,.7);
+    }
+  }
+  * { box-sizing:border-box; }
+  html, body { margin:0; }
+  body { background:var(--bg); color:var(--ink); font-family:var(--sans); line-height:1.55; -webkit-font-smoothing:antialiased; }
+  .num, code, .mono { font-variant-numeric:tabular-nums; }
+  .app { display:flex; align-items:flex-start; min-height:100vh; }
+  .sidebar { position:sticky; top:0; height:100vh; width:270px; flex:none; z-index:40; display:flex; flex-direction:column; overflow-y:auto; padding:20px 14px 16px; background:var(--sidebar-bg); border-right:1px solid var(--line); }
+  .brand { display:flex; align-items:center; gap:11px; padding:4px 10px 16px; margin-bottom:6px; border-bottom:1px solid var(--line); }
+  .glyph { width:32px; height:32px; flex:none; border-radius:9px; background:var(--accent); display:grid; place-items:center; color:#fff; font-family:var(--mono); font-size:16px; box-shadow:0 5px 14px -5px color-mix(in srgb, var(--accent) 60%, transparent); }
+  .brand .wm { display:flex; flex-direction:column; line-height:1.25; }
+  .brand .wm b { font-family:var(--display); font-weight:600; font-size:14.5px; letter-spacing:-.01em; }
+  .brand .wm span { font-family:var(--mono); font-size:9.5px; letter-spacing:.14em; text-transform:uppercase; color:var(--muted); }
+  nav.nav { display:flex; flex-direction:column; }
+  .nav-group { margin-top:13px; }
+  .nav-group-label { font-family:var(--mono); font-size:9.5px; letter-spacing:.13em; text-transform:uppercase; color:var(--muted); padding:0 11px 6px; }
+  .nav-item { display:flex; align-items:center; gap:11px; width:100%; text-align:left; cursor:pointer; background:none; border:none; font-family:var(--sans); font-size:13.5px; color:var(--muted); padding:7px 11px; border-radius:8px; transition:.12s; line-height:1.3; }
+  .nav-item .n { font-family:var(--mono); font-size:11px; color:color-mix(in srgb, var(--muted) 75%, transparent); min-width:15px; text-align:right; }
+  .nav-item:hover { background:var(--hover); color:var(--ink); }
+  .nav-item.active { background:var(--accent-soft); color:var(--accent); font-weight:500; }
+  .nav-item.active .n { color:var(--accent); }
+  .side-foot { margin-top:auto; padding:15px 11px 2px; font-family:var(--mono); font-size:11px; line-height:1.7; color:var(--muted); }
+  .side-foot a { color:var(--muted); text-decoration:none; border-bottom:1px solid var(--line); }
+  .side-foot a:hover { color:var(--accent); border-color:var(--accent); }
+  .main { flex:1; min-width:0; padding:42px clamp(24px,4vw,60px) 100px; }
+  .main-inner { max-width:940px; margin:0 auto; }
+  .topbar, .backdrop { display:none; }
+  .hero-eyebrow { font-family:var(--mono); font-size:11px; letter-spacing:.16em; text-transform:uppercase; color:var(--accent); margin:0 0 14px; }
+  .hero h1 { font-family:var(--display); font-weight:600; font-size:clamp(31px,4.6vw,47px); margin:0 0 16px; letter-spacing:-.026em; line-height:1.03; max-width:17ch; }
+  .hero h1 em { font-style:normal; color:var(--accent); }
+  .hero p { color:var(--muted); margin:0; max-width:62ch; font-size:16.5px; line-height:1.6; }
+  .hero p strong { color:var(--ink); font-weight:600; }
+  .levers { display:grid; grid-template-columns:repeat(auto-fill, minmax(210px,1fr)); gap:12px; margin:30px 0 4px; }
+  .lever { background:var(--panel); border:1px solid var(--line); border-radius:13px; padding:15px 16px; box-shadow:var(--shadow); }
+  .lever b { font-family:var(--display); font-weight:600; font-size:14px; display:block; margin-bottom:4px; }
+  .lever span { font-size:12.5px; color:var(--muted); line-height:1.5; }
+  .overview-hint { font-size:14.5px; color:var(--muted); margin:24px 0 0; line-height:1.6; max-width:66ch; }
+  .overview-hint b { color:var(--ink); font-weight:600; }
+  section.phase { display:none; }
+  section.phase.active { display:block; animation:fade .22s ease; }
+  @keyframes fade { from { opacity:0; transform:translateY(5px); } to { opacity:1; } }
+  .phase h2 { font-family:var(--display); font-weight:600; font-size:25px; margin:0 0 6px; letter-spacing:-.02em; }
+  .phase .lede { color:var(--muted); margin:0 0 20px; max-width:76ch; font-size:15.5px; }
+  .card { background:var(--panel); border:1px solid var(--line); border-radius:16px; padding:20px 22px; margin-bottom:16px; box-shadow:var(--shadow); }
+  .lab { display:grid; grid-template-columns:250px 1fr; gap:22px; align-items:start; }
+  @media (max-width:720px){ .lab { grid-template-columns:1fr; } }
+  .controls { display:flex; flex-direction:column; gap:11px; }
+  .stage { min-width:0; display:flex; flex-direction:column; gap:14px; }
+  label.fld { display:block; font-family:var(--mono); font-size:11px; letter-spacing:.04em; text-transform:uppercase; color:var(--muted); margin-bottom:6px; }
+  input[type=range] { width:100%; accent-color:var(--accent); height:4px; }
+  .slabel { display:flex; justify-content:space-between; align-items:baseline; font-family:var(--mono); font-size:12px; color:var(--muted); margin-bottom:4px; }
+  .slabel b { color:var(--ink); font-size:14px; }
+  button.act { font-family:var(--sans); font-size:13px; background:var(--accent); color:#fff; border:none; padding:9px 14px; border-radius:9px; cursor:pointer; font-weight:500; text-align:left; box-shadow:0 4px 12px -5px color-mix(in srgb, var(--accent) 60%, transparent); transition:.14s; }
+  button.act:hover { filter:brightness(1.06); }
+  button.ghost { font-family:var(--sans); font-size:13px; background:var(--panel-2); color:var(--ink); border:1px solid var(--line); padding:8px 12px; border-radius:9px; cursor:pointer; text-align:left; }
+  button.ghost:hover { border-color:var(--accent); }
+  button.ghost.sel { border-color:var(--accent); color:var(--accent); background:var(--accent-soft); }
+  .seg { display:flex; gap:6px; flex-wrap:wrap; } .seg button { flex:1 1 auto; }
+  .toggle { display:flex; align-items:center; gap:10px; font-size:13.5px; color:var(--ink); cursor:pointer; user-select:none; }
+  .toggle input { width:16px; height:16px; accent-color:var(--accent); }
+  .nav-item:focus-visible, input:focus-visible, button:focus-visible, a:focus-visible { outline:2px solid var(--accent); outline-offset:2px; }
+  .verdict { font-family:var(--mono); font-size:13px; border-radius:9px; padding:11px 13px; border:1px solid var(--line); display:flex; gap:10px; align-items:baseline; background:var(--panel-2); }
+  .verdict .dot { width:9px; height:9px; border-radius:50%; flex:none; translate:0 2px; background:var(--muted); }
+  .verdict.ok { background:var(--good-soft); border-color:color-mix(in srgb,var(--good) 40%,transparent); } .verdict.ok .dot { background:var(--good); }
+  .verdict.bad { background:var(--bad-soft); border-color:color-mix(in srgb,var(--bad) 40%,transparent); } .verdict.bad .dot { background:var(--bad); }
+  .verdict.warn { background:var(--warn-soft); border-color:color-mix(in srgb,var(--warn) 40%,transparent); } .verdict.warn .dot { background:var(--warn); }
+  .proof { font-size:13px; color:var(--muted); border-left:3px solid var(--accent); padding:8px 0 8px 13px; margin-top:2px; background:linear-gradient(90deg, var(--accent-soft), transparent 80%); border-radius:0 8px 8px 0; }
+  .proof b { color:var(--ink); }
+  code { font-family:var(--mono); background:var(--accent-soft); color:var(--accent); padding:1px 5px; border-radius:5px; font-size:.88em; }
+  .chip { display:inline-block; font-family:var(--mono); font-size:11px; padding:2px 8px; border-radius:999px; border:1px solid var(--line); }
+  .chip.good { color:var(--good); border-color:color-mix(in srgb,var(--good) 45%,transparent); background:var(--good-soft); }
+  .chip.bad { color:var(--bad); border-color:color-mix(in srgb,var(--bad) 45%,transparent); background:var(--bad-soft); }
+  .big { font-family:var(--mono); font-size:26px; font-variant-numeric:tabular-nums; }
+  .big small { font-size:11px; color:var(--muted); font-family:var(--mono); text-transform:uppercase; letter-spacing:.06em; display:block; }
+  .lane { border:1px solid var(--line); border-radius:9px; padding:9px 11px; background:var(--panel-2); margin-bottom:7px; }
+  .lane h4 { margin:0 0 7px; font-family:var(--mono); font-size:10px; letter-spacing:.08em; text-transform:uppercase; color:var(--muted); display:flex; justify-content:space-between; }
+  .msgs { display:flex; gap:5px; flex-wrap:wrap; min-height:24px; }
+  .msg { font-family:var(--mono); font-size:12px; padding:4px 8px; border-radius:7px; border:1px solid var(--line); background:var(--panel); }
+  .msg.hi { border-color:var(--accent); color:var(--accent); }
+  .msg.fail { border-color:var(--bad); color:var(--bad); background:var(--bad-soft); }
+  .msg.dlq { border-color:var(--bad); color:var(--muted); text-decoration:line-through; }
+  .msg.done { border-color:var(--good); color:var(--good); background:var(--good-soft); }
+  .log-list { font-family:var(--mono); font-size:12px; line-height:1.75; max-height:180px; overflow:auto; }
+  .kv { display:flex; justify-content:space-between; font-family:var(--mono); font-size:13px; padding:5px 0; border-bottom:1px solid var(--line); }
+  .kv b { font-size:15px; }
+  .cols { display:flex; gap:10px; }
+  .col2 { flex:1; border:1px solid var(--line); border-radius:9px; padding:9px 11px; background:var(--panel-2); }
+  .col2 h4 { margin:0 0 6px; font-family:var(--mono); font-size:10px; letter-spacing:.08em; text-transform:uppercase; color:var(--muted); }
+  .chart { display:flex; align-items:flex-end; gap:4px; height:140px; padding-top:12px; border-bottom:1px solid var(--line); }
+  .colb { flex:1; display:flex; flex-direction:column; justify-content:flex-end; align-items:center; gap:2px; height:100%; }
+  .gp { width:100%; border-radius:3px 3px 0 0; background:var(--accent); transition:height .3s; min-height:1px; }
+  .colb .rn { font-family:var(--mono); font-size:8px; color:var(--muted); }
+  .sidebox { display:flex; gap:10px; flex-wrap:wrap; }
+  .sidecard { flex:1 1 150px; border:1px solid var(--line); border-radius:9px; padding:10px 12px; font-family:var(--mono); font-size:12px; background:var(--panel-2); }
+  .sidecard h4 { margin:0 0 6px; font-size:10px; letter-spacing:.08em; text-transform:uppercase; color:var(--muted); font-weight:500; }
+  @media (max-width:880px) {
+    .app { display:block; }
+    .topbar { display:flex; align-items:center; gap:11px; position:sticky; top:0; z-index:30; padding:11px 16px; background:color-mix(in srgb,var(--bg) 88%,transparent); backdrop-filter:saturate(1.5) blur(10px); border-bottom:1px solid var(--line); }
+    .topbar b { font-family:var(--display); font-weight:600; font-size:15.5px; }
+    .hamburger { margin-left:auto; display:grid; place-items:center; width:38px; height:38px; border:1px solid var(--line); border-radius:9px; background:var(--panel); color:var(--ink); cursor:pointer; font-family:var(--mono); font-size:17px; }
+    .sidebar { position:fixed; top:0; left:0; height:100dvh; width:286px; transform:translateX(-100%); transition:transform .22s ease; box-shadow:0 0 70px rgba(0,0,0,.28); }
+    .app.nav-open .sidebar { transform:none; }
+    .backdrop { display:block; position:fixed; inset:0; z-index:39; background:rgba(0,0,0,.42); opacity:0; pointer-events:none; transition:opacity .22s; }
+    .app.nav-open .backdrop { opacity:1; pointer-events:auto; }
+    .main { padding:22px 18px 84px; }
+    .lab { grid-template-columns:1fr; }
+  }
+  @media (prefers-reduced-motion: reduce) { * { scroll-behavior:auto !important; animation:none !important; transition:none !important; } }
+</style>
+</head>
+<body>
+<div class="app" id="app">
+  <aside class="sidebar" id="sidebar">
+    <div class="brand"><span class="glyph">⇉</span><span class="wm"><b>Queue Lab</b><span>Messaging</span></span></div>
+    <nav class="nav" id="nav" aria-label="Lessons"></nav>
+    <div class="side-foot">Every panel is also a runnable <code style="font-size:10px">npm run phaseN</code>.<br /><a href="https://github.com/swapnull-in/messaging-queues" target="_blank" rel="noopener">View source ↗</a></div>
+  </aside>
+  <div class="backdrop" id="backdrop"></div>
+  <main class="main">
+    <div class="topbar"><span class="glyph">⇉</span><b>Queue Lab</b><button class="hamburger" id="hamburger" aria-label="Toggle navigation">≡</button></div>
+    <div class="main-inner">
+
+    <!-- OVERVIEW -->
+    <section class="phase" data-tab="Overview">
+      <div class="hero">
+        <p class="hero-eyebrow">Messaging · Queue Lab</p>
+        <h1>Watch a message <em>flow</em> and fail.</h1>
+        <p>A queue decouples a fast producer from a slow consumer — and every guarantee it makes (at-least-once,
+          in-order, effectively-once) is a mechanism you can watch here: visibility timeouts, retries, dead letters,
+          idempotency, backpressure, partitions, the outbox, and event sourcing.</p>
+      </div>
+      <div class="levers">
+        <div class="lever"><b>Queue &amp; delivery</b><span>Visibility timeout, retries, DLQ, idempotency, priority.</span></div>
+        <div class="lever"><b>Flow control</b><span>Rate limiting and backpressure — the fast-producer problem.</span></div>
+        <div class="lever"><b>Pub/sub &amp; streaming</b><span>Fan-out, routing exchanges, and the Kafka log.</span></div>
+        <div class="lever"><b>Event-driven</b><span>The outbox, CDC, event sourcing, and CQRS.</span></div>
+      </div>
+      <p class="overview-hint"><b>Pick a lesson in the sidebar.</b> The two families: a <em>queue</em> is "do this work
+        once, then forget it"; a <em>log</em> (Kafka) is "here's the stream of everything that happened — read it however
+        and whenever you like."</p>
+    </section>
+
+    <!-- 1 · QUEUE -->
+    <section class="phase" data-tab="1 · Queue">
+      <h2>The queue — ack, retry, dead-letter</h2>
+      <p class="lede">A worker takes a message and the queue hides it for a <strong>visibility timeout</strong>. Ack in
+        time → deleted. Crash/throw → it reappears and is retried (at-least-once). Fail too many times → it's moved to a
+        <strong>dead-letter queue</strong> so it stops blocking others.</p>
+      <div class="card"><div class="lab">
+        <div class="controls">
+          <button class="act" id="q-produce">＋ Produce 4 jobs (1 poison)</button>
+          <button class="act" id="q-next">▶ Worker processes next</button>
+          <button class="ghost" id="q-reset">↺ Reset</button>
+          <div class="verdict" id="q-verdict"><span class="dot"></span><span id="q-vtext">Produce jobs, then process — watch the poison job retry then dead-letter.</span></div>
+        </div>
+        <div class="stage">
+          <div class="lane"><h4>ready</h4><div class="msgs" id="q-ready"></div></div>
+          <div class="lane"><h4>dead-letter (max 3 attempts)</h4><div class="msgs" id="q-dlq"></div></div>
+          <p class="proof"><b>The proof:</b> a healthy job is processed and acked (deleted). The poison job throws, so its
+            visibility timeout lapses and it's redelivered — attempt 1, 2, 3 — then dead-lettered instead of blocking the
+            queue forever. That redelivery is exactly what makes delivery <em>at-least-once</em> (and why consumers must
+            be idempotent — next panel).</p>
+        </div>
+      </div></div>
+    </section>
+
+    <!-- 3 · IDEMPOTENCY -->
+    <section class="phase" data-tab="3 · Idempotency">
+      <h2>Idempotent consumers — effectively-once</h2>
+      <p class="lede">At-least-once means the same message can arrive twice (a retry after a slow ack). If processing has
+        a side effect — charge a card — a duplicate double-charges. An <strong>idempotency key</strong> + a
+        processed-set makes reprocessing a no-op → <strong>effectively-once</strong>.</p>
+      <div class="card"><div class="lab">
+        <div class="controls">
+          <label class="toggle"><input type="checkbox" id="id-on" checked /> Dedup by idempotency key</label>
+          <button class="act" id="id-send">▶ Charge $20 (delivered twice)</button>
+          <button class="ghost" id="id-reset">↺ Reset</button>
+          <div class="verdict" id="id-verdict"><span class="dot"></span><span id="id-vtext">Send with dedup off, then on.</span></div>
+        </div>
+        <div class="stage">
+          <div style="display:flex; gap:22px; align-items:flex-end; flex-wrap:wrap">
+            <div class="big" id="id-total">$0<small>total charged</small></div>
+            <div class="big" id="id-count" style="font-size:22px">0<small>times processed</small></div>
+          </div>
+          <div class="lane"><h4>delivery log</h4><div class="log-list" id="id-log">—</div></div>
+          <p class="proof"><b>The proof:</b> without dedup, two deliveries → <b>$40</b> (double charge). With an
+            idempotency key, the second delivery finds the key already processed and skips the side effect → <b>$20</b>,
+            processed once. There's no exactly-once on the wire — you get effectively-once by making the consumer
+            idempotent (dedup key, or a natural-key upsert).</p>
+        </div>
+      </div></div>
+    </section>
+
+    <!-- 2 · RETRY & BACKOFF -->
+    <section class="phase" data-tab="2 · Retry &amp; Backoff">
+      <h2>Retries — exponential backoff &amp; jitter</h2>
+      <p class="lede">Retrying a transient failure immediately (or on a fixed schedule) makes every client retry in
+        lockstep — a synchronized thundering herd. <strong>Exponential backoff</strong> spaces retries out; adding
+        <strong>jitter</strong> de-synchronizes many clients so they don't all hammer the dependency at once.</p>
+      <div class="card"><div class="lab">
+        <div class="controls">
+          <label class="toggle"><input type="checkbox" id="rb-jitter" /> Add full jitter</label>
+          <button class="act" id="rb-run">▶ 20 clients retry a failed call</button>
+          <div class="verdict" id="rb-verdict"><span class="dot"></span><span id="rb-vtext">Run with jitter off, then on — watch the retry spikes.</span></div>
+        </div>
+        <div class="stage">
+          <div class="chart" id="rb-chart"></div>
+          <div style="font-family:var(--mono); font-size:12px; color:var(--muted)">retries landing per 1s bucket · base delays 1s, 2s, 4s, 8s</div>
+          <p class="proof"><b>The proof:</b> plain exponential backoff still lands every client's retry at the <em>same</em>
+            instant (1s, 2s, 4s…) — a spike that re-overloads the recovering dependency. Full jitter picks a random delay
+            in <code>[0, backoff]</code>, smearing the retries across the window so the load is flat. Always jitter.</p>
+        </div>
+      </div></div>
+    </section>
+
+    <!-- 8 · PRIORITY -->
+    <section class="phase" data-tab="8 · Priority">
+      <h2>Priority queues — urgent work first</h2>
+      <p class="lede">A plain queue is FIFO. A <strong>priority queue</strong> serves higher-priority messages first,
+        regardless of arrival order — so a password-reset email jumps ahead of a bulk newsletter. The risk: low-priority
+        work can <em>starve</em> if high-priority never drains.</p>
+      <div class="card"><div class="lab">
+        <div class="controls">
+          <button class="act" id="pr-hi">＋ Enqueue HIGH job</button>
+          <button class="act" id="pr-lo">＋ Enqueue low job</button>
+          <button class="act" id="pr-next">▶ Process next</button>
+          <button class="ghost" id="pr-reset">↺ Reset</button>
+          <div class="verdict" id="pr-verdict"><span class="dot"></span><span id="pr-vtext">Enqueue a mix, then process — highest priority leaves first.</span></div>
+        </div>
+        <div class="stage">
+          <div class="lane"><h4>queue (sorted by priority)</h4><div class="msgs" id="pr-q"></div></div>
+          <div class="lane"><h4>processed order</h4><div class="msgs" id="pr-done"></div></div>
+          <p class="proof"><b>The proof:</b> enqueue low, low, HIGH — the HIGH job is dequeued first even though it arrived
+            last. Real brokers implement this with priority levels (RabbitMQ) or separate per-priority queues drained in
+            order. Guard against starvation with aging or a reserved low-priority worker.</p>
+        </div>
+      </div></div>
+    </section>
+
+    <!-- 4 · RATE LIMIT -->
+    <section class="phase" data-tab="4 · Rate Limit">
+      <h2>Rate limiting — the token bucket</h2>
+      <p class="lede">A <strong>token bucket</strong> refills at a steady rate up to a burst capacity; each request spends
+        a token, and requests with no token are throttled. It smooths bursts to a sustainable rate — the standard shape
+        for API limits and outbound-call pacing.</p>
+      <div class="card"><div class="lab">
+        <div class="controls">
+          <div><div class="slabel"><span>refill rate (tokens/s)</span><b id="rl-rval">5</b></div><input type="range" id="rl-rate" min="1" max="20" value="5" /></div>
+          <div><div class="slabel"><span>bucket capacity (burst)</span><b id="rl-cval">10</b></div><input type="range" id="rl-cap" min="1" max="30" value="10" /></div>
+          <button class="act" id="rl-run">▶ 40 requests arrive over 4s</button>
+          <div class="verdict" id="rl-verdict"><span class="dot"></span><span id="rl-vtext">Send a burst and watch how many pass vs throttle.</span></div>
+        </div>
+        <div class="stage">
+          <div style="display:flex; gap:22px; align-items:flex-end; flex-wrap:wrap">
+            <div class="big" id="rl-pass" style="color:var(--good)">—<small>allowed</small></div>
+            <div class="big" id="rl-drop" style="font-size:22px; color:var(--bad)">—<small>throttled (429)</small></div>
+          </div>
+          <div class="chart" id="rl-chart"></div>
+          <p class="proof"><b>The proof:</b> the bucket absorbs an initial burst up to its capacity, then admits requests
+            only as tokens refill — so a spiky arrival pattern is shaped to a steady sustainable rate; the excess is
+            throttled (429, or delayed). Bigger capacity = burstier; higher refill = higher steady throughput.</p>
+        </div>
+      </div></div>
+    </section>
+
+    <!-- 12 · BACKPRESSURE -->
+    <section class="phase" data-tab="12 · Backpressure">
+      <h2>Backpressure — a fast producer, a slow consumer</h2>
+      <p class="lede">When producers outrun consumers, an <strong>unbounded</strong> queue grows forever (memory blowup,
+        rising latency). Consumer <strong>lag</strong> is the signal. Three responses: <strong>block</strong> the
+        producer (flow control), <strong>shed</strong> load (drop/429), or scale consumers until the downstream is the
+        bottleneck.</p>
+      <div class="card"><div class="lab">
+        <div class="controls">
+          <div><label class="fld">policy</label><div class="seg"><button class="ghost sel" id="bp-un">unbounded</button><button class="ghost" id="bp-block">block</button><button class="ghost" id="bp-shed">shed</button></div></div>
+          <button class="act" id="bp-run">▶ Run 20 ticks · produce 8/tick, consume 5/tick</button>
+          <div class="verdict" id="bp-verdict"><span class="dot"></span><span id="bp-vtext">Run each policy and watch the lag curve.</span></div>
+        </div>
+        <div class="stage">
+          <div class="chart" id="bp-chart"></div>
+          <div style="font-family:var(--mono); font-size:12px; color:var(--muted)">queue depth (lag) per tick</div>
+          <p class="proof"><b>The proof:</b> unbounded → lag climbs every tick without limit (an overload becomes an OOM
+            crash). Bounded + <b>block</b> caps the buffer and pushes back on the producer — throughput settles at the
+            consumer's rate. <b>Shed</b> drops the excess to keep lag and latency bounded (best when the source can't be
+            slowed and stale work is worthless). Scaling consumers helps only until the shared DB is the bottleneck.</p>
+        </div>
+      </div></div>
+    </section>
+
+    <!-- 7 · PUB/SUB -->
+    <section class="phase" data-tab="7 · Pub/Sub">
+      <h2>Pub/sub — fan-out, no retention</h2>
+      <p class="lede">A queue delivers each message to <em>one</em> consumer. <strong>Pub/sub</strong> broadcasts each
+        message to <em>every</em> subscriber. Classic pub/sub (Redis) is fire-and-forget — a subscriber that wasn't
+        connected <strong>misses</strong> the message (no retention). That's the key contrast with a Kafka log.</p>
+      <div class="card"><div class="lab">
+        <div class="controls">
+          <button class="act" id="ps-sub">＋ Add a subscriber</button>
+          <button class="act" id="ps-pub">📣 Publish an event</button>
+          <button class="ghost" id="ps-reset">↺ Reset</button>
+          <div class="verdict" id="ps-verdict"><span class="dot"></span><span id="ps-vtext">Add a subscriber, publish, add another subscriber, publish again.</span></div>
+        </div>
+        <div class="stage">
+          <div class="sidebox" id="ps-subs"></div>
+          <p class="proof"><b>The proof:</b> every currently-connected subscriber gets each published event (fan-out). But
+            a subscriber added <em>after</em> a publish never sees the earlier events — classic pub/sub keeps no history.
+            When you need late/replaying readers or many independent consumer groups over retained history, you want a
+            <b>log</b> (Kafka), not pub/sub.</p>
+        </div>
+      </div></div>
+    </section>
+
+    <!-- 5 · ROUTING -->
+    <section class="phase" data-tab="5 · Routing">
+      <h2>Exchanges — direct, fanout, topic routing</h2>
+      <p class="lede">RabbitMQ publishes to an <strong>exchange</strong>, which routes to queues by their bindings.
+        <strong>Direct</strong> matches the routing key exactly; <strong>fanout</strong> ignores it (broadcast);
+        <strong>topic</strong> matches wildcard patterns (<code>order.*</code>, <code>*.eu</code>).</p>
+      <div class="card"><div class="lab">
+        <div class="controls">
+          <div><label class="fld">exchange type</label><div class="seg"><button class="ghost sel" id="rt-direct">direct</button><button class="ghost" id="rt-fanout">fanout</button><button class="ghost" id="rt-topic">topic</button></div></div>
+          <div><label class="fld">publish with routing key</label><div class="seg"><button class="ghost sel" id="rt-k1">order.eu</button><button class="ghost" id="rt-k2">order.us</button><button class="ghost" id="rt-k3">payment.eu</button></div></div>
+          <button class="act" id="rt-pub">📣 Publish</button>
+          <div class="verdict" id="rt-verdict"><span class="dot"></span><span id="rt-vtext">Pick an exchange type and a routing key, then publish.</span></div>
+        </div>
+        <div class="stage">
+          <div class="sidebox" id="rt-queues"></div>
+          <p class="proof"><b>The proof:</b> direct delivers only to queues bound to the exact key; fanout ignores the key
+            and hits every bound queue; topic matches patterns (<code>order.*</code> gets order.eu &amp; order.us;
+            <code>*.eu</code> gets order.eu &amp; payment.eu). The exchange decouples publishers from the set of consumers
+            — add a queue with a new binding without touching the publisher.</p>
+        </div>
+      </div></div>
+    </section>
+
+    <!-- 6 · KAFKA LOG -->
+    <section class="phase" data-tab="6 · Kafka Log">
+      <h2>The log — partitions, offsets, consumer groups, replay</h2>
+      <p class="lede">A Kafka topic is an append-only, <strong>retained</strong> log split into
+        <strong>partitions</strong> (parallelism). A message's <strong>key</strong> picks its partition, so per-key order
+        is preserved. Consumers track their own <strong>offset</strong>; reading doesn't delete, so you can add a new
+        group or <strong>replay</strong> from the start any time.</p>
+      <div class="card"><div class="lab">
+        <div class="controls">
+          <div><label class="fld">produce (key → same partition)</label><div class="seg"><button class="ghost" id="k-a">key A</button><button class="ghost" id="k-b">key B</button><button class="ghost" id="k-c">key C</button></div></div>
+          <button class="act" id="k-consume">▶ "realtime" group reads next</button>
+          <button class="ghost" id="k-replay">⟲ New group replays from offset 0</button>
+          <button class="ghost" id="k-reset">↺ Reset</button>
+          <div class="verdict" id="k-verdict"><span class="dot"></span><span id="k-vtext">Produce a few keyed messages, then consume and replay.</span></div>
+        </div>
+        <div class="stage">
+          <div id="k-partitions"></div>
+          <div class="lane"><h4>consumer group offsets</h4><div id="k-groups" style="font-family:var(--mono);font-size:12.5px"></div></div>
+          <p class="proof"><b>The proof:</b> messages with the same key always land in the same partition, so their order
+            is preserved (A's events stay ordered even as B's interleave across partitions). Each consumer group has its
+            own offset — the "realtime" group advances as it reads, and a brand-new group can <b>replay</b> the whole
+            retained log from offset 0. That's what a queue (which deletes on ack) can't do.</p>
+        </div>
+      </div></div>
+    </section>
+
+    <!-- 9 · OUTBOX -->
+    <section class="phase" data-tab="9 · Outbox &amp; CDC">
+      <h2>The dual-write bug → outbox → CDC</h2>
+      <p class="lede">A service must change its DB <em>and</em> publish an event. Two separate steps means a crash between
+        them leaves them disagreeing — the module's #1 pattern. The <strong>outbox</strong> writes the event in the same
+        transaction; a relay publishes it. <strong>CDC</strong> tails the DB's change log instead.</p>
+      <div class="card"><div class="lab">
+        <div class="controls">
+          <div><label class="fld">approach</label><div class="seg"><button class="ghost sel" id="ob-dual">dual-write</button><button class="ghost" id="ob-outbox">outbox</button><button class="ghost" id="ob-cdc">CDC</button></div></div>
+          <button class="act" id="ob-run">▶ Place order — crash mid-way</button>
+          <button class="ghost" id="ob-relay" style="display:none">⟳ Restart · relay/CDC publishes</button>
+          <button class="ghost" id="ob-reset">↺ Reset</button>
+          <div class="verdict" id="ob-verdict"><span class="dot"></span><span id="ob-vtext">Run each approach with a crash and compare.</span></div>
+        </div>
+        <div class="stage">
+          <div class="sidebox">
+            <div class="sidecard"><h4>Database</h4><div id="ob-db">order: (none)</div><div id="ob-obx" style="margin-top:5px">outbox: (none)</div></div>
+            <div class="sidecard"><h4>Broker / consumer</h4><div id="ob-broker">0 event(s)</div><div id="ob-cons" style="margin-top:5px">0 shipment(s)</div></div>
+          </div>
+          <p class="proof"><b>The proof:</b> dual-write commits the DB then 💥 crashes before publishing → order PAID, no
+            event, permanently inconsistent. The <b>outbox</b> writes the event row in the same transaction, so a crash
+            just delays delivery — the relay replays it. <b>CDC</b> tails the DB's change log and emits the event with no
+            app-level outbox table. Both are at-least-once → dedupe by id for effectively-once.</p>
+        </div>
+      </div></div>
+    </section>
+
+    <!-- 10 · EVENT SOURCING -->
+    <section class="phase" data-tab="10 · Event Sourcing">
+      <h2>Event sourcing — state is a fold of events</h2>
+      <p class="lede">Store the <strong>events</strong> as the source of truth, not the current state. State is a
+        left-fold over the log — so you can <strong>replay</strong> to rebuild it, <strong>time-travel</strong> to any
+        past version (a free audit log), and <strong>snapshot</strong> to bound replay cost.</p>
+      <div class="card"><div class="lab">
+        <div class="controls">
+          <button class="act" id="es-add">＋ Add item</button>
+          <button class="act" id="es-remove">－ Remove an item</button>
+          <button class="ghost" id="es-rebuild">⟳ Rebuild state by replaying</button>
+          <button class="ghost" id="es-snap">📸 Snapshot</button>
+          <button class="ghost" id="es-reset">↺ Reset</button>
+          <div class="verdict" id="es-verdict"><span class="dot"></span><span id="es-vtext">Add/remove items, then rebuild by replay and snapshot.</span></div>
+        </div>
+        <div class="stage">
+          <div class="lane"><h4>event log (source of truth)</h4><div class="msgs" id="es-log"></div></div>
+          <div class="lane"><h4>derived state (cart)</h4><div class="msgs" id="es-state"></div></div>
+          <p class="proof"><b>The proof:</b> each command appends an event; the current cart is a fold over the log —
+            throw the state away and it rebuilds identically by replaying. Fold only the first k events for the state
+            "as of" then (audit / time-travel). A snapshot at version k means a rebuild replays only events after k,
+            bounding the cost for long-lived aggregates. The price: more storage, thinking in events not rows.</p>
+        </div>
+      </div></div>
+    </section>
+
+    <!-- 11 · CQRS -->
+    <section class="phase" data-tab="11 · CQRS">
+      <h2>CQRS — split writes from reads</h2>
+      <p class="lede">Separate the <strong>write model</strong> (commands, consistency) from purpose-built
+        <strong>read models</strong> kept in sync by projecting events. One event stream can feed many differently-shaped
+        views — at the cost of a <strong>read-lag</strong> window (eventual consistency).</p>
+      <div class="card"><div class="lab">
+        <div class="controls">
+          <label class="toggle"><input type="checkbox" id="cq-async" checked /> Async projection (read lag)</label>
+          <button class="act" id="cq-like">👍 Like a post (write)</button>
+          <button class="act" id="cq-read">👁 Query the read models</button>
+          <button class="ghost" id="cq-rebuild">⟳ Add + rebuild a new read model</button>
+          <button class="ghost" id="cq-reset">↺ Reset</button>
+          <div class="verdict" id="cq-verdict"><span class="dot"></span><span id="cq-vtext">Like a post, then immediately query — see the stale read, then convergence.</span></div>
+        </div>
+        <div class="stage">
+          <div class="cols">
+            <div class="col2"><h4>write model (events)</h4><div id="cq-write" class="log-list"></div></div>
+            <div class="col2"><h4>read models (projections)</h4><div id="cq-readm" style="font-family:var(--mono);font-size:12.5px"></div></div>
+          </div>
+          <p class="proof"><b>The proof:</b> a command emits an event; a projector updates the read models
+            asynchronously, so a query issued <em>immediately</em> after the write is momentarily <b>stale</b> (the
+            read-lag window), then converges. The same events feed two views — a per-post counter and a leaderboard —
+            each shaped for its query. You can add a new read model later and backfill it by replaying (CQRS + event
+            sourcing compose).</p>
+        </div>
+      </div></div>
+    </section>
+
+    <div class="side-foot" style="margin-top:24px; padding-top:22px; border-top:1px solid var(--line); text-align:center">Browser port of the <code style="font-size:10px">src/phase*</code> scripts · same mechanics · MIT</div>
+    </div><!-- /main-inner -->
+  </main>
+</div>
+
+<script>
+const sections = [...document.querySelectorAll('section.phase')];
+const navEl = document.getElementById('nav'), appEl = document.getElementById('app');
+const tabButtons = [];
+const slug = s => s.dataset.tab.toLowerCase().replace(/[^a-z0-9]+/g,'-').replace(/^-|-$/g,'');
+const reduceMotion = matchMedia('(prefers-reduced-motion: reduce)').matches;
+const closeNav = () => appEl.classList.remove('nav-open');
+const TIER_OF = {
+  'overview':'Overview',
+  '1-queue':'Queue & delivery', '3-idempotency':'Queue & delivery', '2-retry-backoff':'Queue & delivery', '8-priority':'Queue & delivery',
+  '4-rate-limit':'Flow control', '12-backpressure':'Flow control',
+  '7-pub-sub':'Pub/sub & streaming', '5-routing':'Pub/sub & streaming', '6-kafka-log':'Pub/sub & streaming',
+  '9-outbox-cdc':'Event-driven', '10-event-sourcing':'Event-driven', '11-cqrs':'Event-driven',
+};
+navEl.setAttribute('role','tablist'); navEl.setAttribute('aria-orientation','vertical');
+let curTier=null, groupEl=null;
+sections.forEach((sec,i)=>{ const id=slug(sec), tier=TIER_OF[id]||'More';
+  if(tier!==curTier){ groupEl=document.createElement('div'); groupEl.className='nav-group';
+    const h=document.createElement('div'); h.className='nav-group-label'; h.textContent=tier; groupEl.appendChild(h); navEl.appendChild(groupEl); curTier=tier; }
+  sec.id='panel-'+id; sec.setAttribute('role','tabpanel');
+  const parts=sec.dataset.tab.split('·').map(s=>s.trim());
+  const b=document.createElement('button'); b.className='nav-item'; b.setAttribute('role','tab');
+  b.innerHTML=`<span class="n">${parts.length>1?parts[0]:''}</span><span class="t">${parts.length>1?parts[1]:parts[0]}</span>`;
+  b.onclick=()=>{ activate(i,true); closeNav(); };
+  b.onkeydown=(e)=>{ const d=e.key==='ArrowDown'?1:e.key==='ArrowUp'?-1:e.key==='Home'?'first':e.key==='End'?'last':0; if(!d)return; e.preventDefault();
+    const n=d==='first'?0:d==='last'?sections.length-1:(i+d+sections.length)%sections.length; activate(n,true); tabButtons[n].focus(); };
+  tabButtons.push(b); groupEl.appendChild(b); });
+function activate(i,push){ sections.forEach((s,j)=>s.classList.toggle('active',i===j));
+  tabButtons.forEach((b,j)=>{ const on=i===j; b.classList.toggle('active',on); b.setAttribute('aria-selected',String(on)); b.tabIndex=on?0:-1; });
+  if(push && location.hash.slice(1)!==slug(sections[i])) history.replaceState(null,'','#'+slug(sections[i]));
+  window.scrollTo({ top:0, behavior: reduceMotion?'auto':'smooth' }); }
+function fromHash(){ const i=sections.findIndex(s=>slug(s)===location.hash.slice(1)); activate(i>=0?i:0,false); }
+addEventListener('hashchange',fromHash); fromHash();
+document.getElementById('hamburger')?.addEventListener('click',()=>appEl.classList.toggle('nav-open'));
+document.getElementById('backdrop')?.addEventListener('click',closeNav);
+addEventListener('keydown',e=>{ if(e.key==='Escape') closeNav(); });
+
+const $=(s,r=document)=>r.querySelector(s), el=(t,c)=>{ const n=document.createElement(t); if(c)n.className=c; return n; };
+function verdict(sel,tsel,kind,text){ const v=$(sel); v.className='verdict '+kind; $(tsel).innerHTML=text; }
+
+/* ══ 1 · QUEUE ══ */
+(function(){
+  let ready, dlq, id;
+  function reset(){ ready=[]; dlq=[]; id=0; paint('Produce jobs, then process — watch the poison job retry then dead-letter.','warn'); }
+  function paint(msg,kind){ $('#q-ready').innerHTML = ready.length? ready.map(m=>`<span class="msg${m.poison?' fail':''}">${m.name}${m.attempts?` ·a${m.attempts}`:''}</span>`).join('') : '<span class="msg" style="opacity:.5">(empty)</span>';
+    $('#q-dlq').innerHTML = dlq.length? dlq.map(m=>`<span class="msg dlq">${m.name}</span>`).join('') : '<span class="msg" style="opacity:.5">(empty)</span>';
+    verdict('#q-verdict','#q-vtext',kind,msg); }
+  $('#q-produce').onclick=()=>{ ['email A','email B','poison','email C'].forEach(n=>ready.push({name:n,poison:n==='poison',attempts:0})); paint('Produced 4 jobs. Process them one at a time.','warn'); };
+  $('#q-next').onclick=()=>{ if(!ready.length){ paint('Queue empty — produce some jobs.','warn'); return; } const m=ready.shift(); m.attempts++;
+    if(m.poison){ if(m.attempts>=3){ dlq.push(m); paint(`"${m.name}" threw on attempt ${m.attempts} → <b>dead-lettered</b> (max attempts). It stops blocking the queue.`,'bad'); }
+      else { ready.push(m); paint(`"${m.name}" threw → visibility timeout lapsed → <b>redelivered</b> (attempt ${m.attempts}/3). At-least-once.`,'warn'); } }
+    else paint(`"${m.name}" processed and <b>acked</b> (deleted). ${ready.length} left.`,'ok'); };
+  $('#q-reset').onclick=reset; reset();
+})();
+
+/* ══ 3 · IDEMPOTENCY ══ */
+(function(){
+  let total, count, seen;
+  function reset(){ total=0; count=0; seen=new Set(); $('#id-log').innerHTML='—'; paint(); verdict('#id-verdict','#id-vtext','warn','Send with dedup off, then on.'); }
+  function paint(){ $('#id-total').innerHTML='$'+total+'<small>total charged</small>'; $('#id-count').innerHTML=count+'<small>times processed</small>'; }
+  function deliver(key,attempt){ const dedup=$('#id-on').checked; const dup=dedup&&seen.has(key);
+    if(!dup){ total+=20; count++; if(dedup) seen.add(key); }
+    const c=el('div'); c.innerHTML=`delivery ${attempt} (key ${key.slice(0,6)}) → ${dup?'<span style="color:var(--good)">already processed · skipped</span>':'charged $20'}`;
+    const log=$('#id-log'); if(log.textContent==='—') log.innerHTML=''; log.prepend(c); paint(); }
+  $('#id-send').onclick=()=>{ const key='chg_7f3a'; deliver(key,1); deliver(key,2);
+    verdict('#id-verdict','#id-vtext', total>20?'bad':'ok', total>20? `Delivered twice with dedup OFF → <b>$${total}</b> (double charge!).` : `Delivered twice, deduped by key → charged once, <b>$${total}</b>. Effectively-once.`); };
+  $('#id-reset').onclick=reset; $('#id-on').onchange=reset; reset();
+})();
+
+/* ══ 2 · RETRY & BACKOFF ══ */
+(function(){
+  function mulberry32(a){ return function(){ a|=0; a=a+0x6D2B79F5|0; let t=Math.imul(a^a>>>15,1|a); t=t+Math.imul(t^t>>>7,61|t)^t; return ((t^t>>>14)>>>0)/4294967296; }; }
+  $('#rb-run').onclick=()=>{ const jitter=$('#rb-jitter').checked; const rnd=mulberry32(11); const BUCKETS=16; const hist=new Array(BUCKETS).fill(0);
+    for(let c=0;c<20;c++){ [1,2,4,8].forEach(base=>{ const t = jitter ? rnd()*base : base; const b=Math.min(BUCKETS-1,Math.floor(t*2)); hist[b]++; }); }
+    const chart=$('#rb-chart'); chart.innerHTML=''; const mx=Math.max(...hist,1);
+    hist.forEach((v,i)=>{ const col=el('div','colb'); const bar=el('div','gp'); bar.style.background=v>=15?'var(--bad)':'var(--accent)'; bar.style.height=(v/mx*110)+'px'; const rn=el('div','rn'); rn.textContent=(i%4===0)?(i/2)+'s':''; col.appendChild(bar); col.appendChild(rn); chart.appendChild(col); });
+    if(jitter) verdict('#rb-verdict','#rb-vtext','ok','Full jitter smears each client&rsquo;s retries across the window → load is flat, no synchronized spike.');
+    else verdict('#rb-verdict','#rb-vtext','bad','No jitter: all 20 clients retry at exactly 1s, 2s, 4s, 8s → tall synchronized spikes that re-overload the recovering dependency.'); };
+  $('#rb-jitter').onchange=()=>$('#rb-run').click(); $('#rb-run').click();
+})();
+
+/* ══ 8 · PRIORITY ══ */
+(function(){
+  let q, done, id;
+  function reset(){ q=[]; done=[]; id=0; paint('Enqueue a mix, then process — highest priority leaves first.','warn'); }
+  function paint(msg,kind){ const sorted=[...q].sort((a,b)=>b.p-a.p||a.id-b.id);
+    $('#pr-q').innerHTML = sorted.length? sorted.map(m=>`<span class="msg${m.p?' hi':''}">${m.name}</span>`).join('') : '<span class="msg" style="opacity:.5">(empty)</span>';
+    $('#pr-done').innerHTML = done.length? done.map(m=>`<span class="msg done">${m.name}</span>`).join('') : '<span class="msg" style="opacity:.5">—</span>';
+    if(msg) verdict('#pr-verdict','#pr-vtext',kind||'warn',msg); }
+  $('#pr-hi').onclick=()=>{ q.push({name:'HIGH#'+(++id),p:1,id}); paint('Enqueued a HIGH job.','warn'); };
+  $('#pr-lo').onclick=()=>{ q.push({name:'low#'+(++id),p:0,id}); paint('Enqueued a low job.','warn'); };
+  $('#pr-next').onclick=()=>{ if(!q.length){ paint('Queue empty.','warn'); return; } q.sort((a,b)=>b.p-a.p||a.id-b.id); const m=q.shift(); done.push(m); paint(`Processed <b>${m.name}</b> (priority ${m.p}) — highest-priority first, regardless of arrival.`, m.p?'ok':'warn'); };
+  $('#pr-reset').onclick=reset; reset();
+})();
+
+/* ══ 4 · RATE LIMIT ══ */
+(function(){
+  function render(){ const rate=+$('#rl-rate').value, cap=+$('#rl-cap').value; $('#rl-rval').textContent=rate; $('#rl-cval').textContent=cap;
+    // 40 requests over 4s → 10/tick across 4 ticks of 1s, tokens refill `rate`/s
+    let tokens=cap, pass=0, drop=0; const TICKS=4, PER=10; const perTick=[];
+    for(let t=0;t<TICKS;t++){ tokens=Math.min(cap,tokens+ (t>0?rate:0)); let tp=0; for(let r=0;r<PER;r++){ if(tokens>=1){ tokens--; pass++; tp++; } else drop++; } perTick.push(tp); }
+    $('#rl-pass').innerHTML=pass+'<small>allowed</small>'; $('#rl-drop').innerHTML=drop+'<small>throttled (429)</small>';
+    const chart=$('#rl-chart'); chart.innerHTML=''; perTick.forEach((v,i)=>{ const col=el('div','colb'); const bar=el('div','gp'); bar.style.background='var(--good)'; bar.style.height=(v/PER*110)+'px'; const drop2=el('div','gp'); drop2.style.background='var(--bad)'; drop2.style.height=((PER-v)/PER*110)+'px'; const rn=el('div','rn'); rn.textContent='s'+(i+1);
+      const wrap=el('div','colb'); wrap.style.justifyContent='flex-end'; wrap.appendChild(drop2); wrap.appendChild(bar); wrap.appendChild(rn); chart.appendChild(wrap); });
+  }
+  $('#rl-run').onclick=()=>{ render(); const cap=+$('#rl-cap').value, rate=+$('#rl-rate').value; verdict('#rl-verdict','#rl-vtext','ok',`The bucket absorbed the first burst up to capacity ${cap}, then admitted ~${rate}/s as tokens refilled — a spiky arrival shaped to a steady rate. Green = allowed, red = throttled.`); };
+  ['#rl-rate','#rl-cap'].forEach(id=>$(id).oninput=render); render();
+})();
+
+/* ══ 12 · BACKPRESSURE ══ */
+(function(){
+  const P=8, C=5, TICKS=20, CAP=20; let mode='un';
+  function setM(m){ mode=m; ['un','block','shed'].forEach(x=>$('#bp-'+x).classList.toggle('sel',x===m)); }
+  $('#bp-un').onclick=()=>setM('un'); $('#bp-block').onclick=()=>setM('block'); $('#bp-shed').onclick=()=>setM('shed');
+  $('#bp-run').onclick=()=>{ let buf=0, dropped=0; const lag=[];
+    for(let t=0;t<TICKS;t++){ let inflow=P; if(mode==='block') inflow=Math.min(P, CAP-buf+C); if(mode==='shed'){ const room=CAP-buf; if(P>room){ dropped+=P-room; inflow=room; } }
+      buf+=inflow; buf=Math.max(0,buf-C); if(mode!=='un') buf=Math.min(buf,CAP); lag.push(buf); }
+    const chart=$('#bp-chart'); chart.innerHTML=''; const mx=Math.max(...lag,1);
+    lag.forEach((v,i)=>{ const col=el('div','colb'); const bar=el('div','gp'); bar.style.background=mode==='un'?'var(--bad)':(mode==='shed'?'var(--amber)':'var(--good)'); bar.style.height=(v/mx*110)+'px'; const rn=el('div','rn'); rn.textContent=(i%5===0)?i:''; col.appendChild(bar); col.appendChild(rn); chart.appendChild(col); });
+    const last=lag[lag.length-1];
+    if(mode==='un') verdict('#bp-verdict','#bp-vtext','bad',`Unbounded: lag climbs every tick to <b>${last}</b> and never stops — an overload becomes an OOM crash. Consumer lag is the signal.`);
+    else if(mode==='block') verdict('#bp-verdict','#bp-vtext','ok',`Bounded + block: the buffer caps at ${CAP} and pushes back on the producer → throughput settles at the consumer's rate, lag bounded.`);
+    else verdict('#bp-verdict','#bp-vtext','ok',`Shed: buffer capped at ${CAP}, <b>${dropped}</b> messages dropped → lag &amp; latency stay bounded. Best when the source can't be slowed and stale work is worthless.`); };
+  $('#bp-run').onclick2=null; setM('un'); $('#bp-run').click();
+})();
+
+/* ══ 7 · PUB/SUB ══ */
+(function(){
+  let subs, pubCount;
+  function reset(){ subs=[]; pubCount=0; paint('Add a subscriber, publish, add another subscriber, publish again.','warn'); }
+  function paint(msg,kind){ $('#ps-subs').innerHTML = subs.length? subs.map((s,i)=>`<div class="sidecard"><h4>subscriber ${i+1}</h4>received ${s.got} of ${pubCount} events${s.missed?` <span style="color:var(--bad)">· missed ${s.missed}</span>`:''}</div>`).join('') : '<div class="sidecard">no subscribers yet</div>';
+    if(msg) verdict('#ps-verdict','#ps-vtext',kind||'warn',msg); }
+  $('#ps-sub').onclick=()=>{ subs.push({got:0,missed:pubCount}); paint(`Added subscriber ${subs.length}. It missed the ${pubCount} earlier event(s) — classic pub/sub keeps no history.`, pubCount?'bad':'warn'); };
+  $('#ps-pub').onclick=()=>{ pubCount++; subs.forEach(s=>s.got++); paint(`Published event #${pubCount} → fanned out to all ${subs.length} connected subscriber(s).`,'ok'); };
+  $('#ps-reset').onclick=reset; reset();
+})();
+
+/* ══ 5 · ROUTING ══ */
+(function(){
+  const QUEUES=[{name:'q.orders', bind:'order.*'},{name:'q.eu', bind:'*.eu'},{name:'q.payments', bind:'payment.eu'},{name:'q.audit', bind:'#'}];
+  let ex='direct', key='order.eu';
+  const match=(bind,k)=>{ if(bind==='#') return true; const bp=bind.split('.'), kp=k.split('.'); if(bp.length!==kp.length) return false; return bp.every((seg,i)=>seg==='*'||seg===kp[i]); };
+  const exactMatch=(bind,k)=> bind===k || bind==='#';
+  function setEx(e){ ex=e; ['direct','fanout','topic'].forEach(x=>$('#rt-'+x).classList.toggle('sel',x===e)); }
+  function setKey(k){ key=k; [['rt-k1','order.eu'],['rt-k2','order.us'],['rt-k3','payment.eu']].forEach(([id,kk])=>$('#'+id).classList.toggle('sel',kk===k)); }
+  $('#rt-direct').onclick=()=>setEx('direct'); $('#rt-fanout').onclick=()=>setEx('fanout'); $('#rt-topic').onclick=()=>setEx('topic');
+  $('#rt-k1').onclick=()=>setKey('order.eu'); $('#rt-k2').onclick=()=>setKey('order.us'); $('#rt-k3').onclick=()=>setKey('payment.eu');
+  $('#rt-pub').onclick=()=>{
+    const hit=QUEUES.map(q=>{ let m; if(ex==='fanout') m=true; else if(ex==='direct') m=exactMatch(q.bind,key)&&!q.bind.includes('*'); else m=match(q.bind,key); return {...q,m}; });
+    $('#rt-queues').innerHTML=hit.map(q=>`<div class="sidecard" style="${q.m?'border-color:var(--good)':''}"><h4>${q.name}</h4>bind <code style="font-size:10px">${q.bind}</code><br>${q.m?'<span class="chip good">received</span>':'<span style="color:var(--muted)">—</span>'}</div>`).join('');
+    const n=hit.filter(q=>q.m).length;
+    verdict('#rt-verdict','#rt-vtext','ok',`${ex} exchange, key "<b>${key}</b>" → delivered to <b>${n}</b> queue(s). ${ex==='fanout'?'Fanout ignores the key — every bound queue.':ex==='direct'?'Direct matches the exact binding.':'Topic matches wildcard patterns (order.*, *.eu, # = all).'}`);
+  };
+  setEx('direct'); setKey('order.eu'); $('#rt-pub').click();
+})();
+
+/* ══ 6 · KAFKA LOG ══ */
+(function(){
+  const NP=3; let parts, groups, seq;
+  function reset(){ parts=[[],[],[]]; groups={realtime:[0,0,0]}; seq=0; paint('Produce a few keyed messages, then consume and replay.','warn'); }
+  const partOf=k=>k.charCodeAt(0)%NP;
+  function paint(msg,kind){ $('#k-partitions').innerHTML=parts.map((p,i)=>`<div class="lane"><h4>partition ${i}</h4><div class="msgs">${p.length?p.map((m,off)=>`<span class="msg${m.key==='A'?' hi':''}">${m.key}:${m.v} <span style="opacity:.5">@${off}</span></span>`).join(''):'<span class="msg" style="opacity:.5">(empty)</span>'}</div></div>`).join('');
+    $('#k-groups').innerHTML=Object.entries(groups).map(([g,offs])=>`${g} · offsets [${offs.join(', ')}] · read ${offs.reduce((a,b)=>a+b,0)}/${parts.reduce((a,p)=>a+p.length,0)}`).join('<br>');
+    if(msg) verdict('#k-verdict','#k-vtext',kind||'warn',msg); }
+  function produce(key){ seq++; parts[partOf(key)].push({key,v:seq}); paint(`Produced ${key}:${seq} → partition ${partOf(key)} (key picks the partition, so ${key}'s messages stay ordered).`,'ok'); }
+  $('#k-a').onclick=()=>produce('A'); $('#k-b').onclick=()=>produce('B'); $('#k-c').onclick=()=>produce('C');
+  $('#k-consume').onclick=()=>{ const offs=groups.realtime; let advanced=false;
+    for(let i=0;i<NP;i++){ if(offs[i]<parts[i].length){ offs[i]++; advanced=true; break; } }
+    paint(advanced?`"realtime" group read one message — its offset advanced. Reading does NOT delete; the log is retained.`:`"realtime" has read the whole log — nothing new. (In a queue this would be gone.)`, advanced?'ok':'warn'); };
+  $('#k-replay').onclick=()=>{ groups.analytics=[0,0,0]; paint(`New "analytics" group added at offset 0 → it can <b>replay the entire retained log</b> from the start, independently of "realtime". A queue can't do this.`,'ok'); };
+  $('#k-reset').onclick=reset; reset();
+})();
+
+/* ══ 9 · OUTBOX & CDC ══ */
+(function(){
+  let mode='dual', db, outbox, broker, ship;
+  function setM(m){ mode=m; ['dual','outbox','cdc'].forEach(x=>$('#ob-'+x).classList.toggle('sel',x===m)); reset(); }
+  ['dual','outbox','cdc'].forEach(m=>$('#ob-'+m).onclick=()=>setM(m));
+  function reset(){ db='(none)'; outbox='(none)'; broker=0; ship=0; paint(); $('#ob-relay').style.display='none'; verdict('#ob-verdict','#ob-vtext','warn','Run each approach with a crash and compare.'); }
+  function paint(){ $('#ob-db').textContent='order: '+db; $('#ob-obx').textContent='outbox: '+outbox; $('#ob-broker').textContent=broker+' event(s)'; $('#ob-cons').textContent=ship+' shipment(s)'; }
+  $('#ob-run').onclick=()=>{ if(mode==='dual'){ db='order#1 PAID'; outbox='(n/a)'; broker=0; ship=0; paint();
+      verdict('#ob-verdict','#ob-vtext','bad','Dual-write: committed the DB, then 💥 crashed before publishing → order PAID but <b>no event</b>. Shipping never hears about it — permanently inconsistent.'); }
+    else if(mode==='outbox'){ db='order#1 PAID'; outbox='event#1 (unsent)'; broker=0; ship=0; paint(); $('#ob-relay').style.display='block';
+      verdict('#ob-verdict','#ob-vtext','warn','Outbox: the order AND the event row committed in one transaction, then 💥 crashed before the relay ran. The event is safe. Restart →'); }
+    else { db='order#1 PAID'; outbox='(none — CDC tails the WAL)'; broker=0; ship=0; paint(); $('#ob-relay').style.display='block';
+      verdict('#ob-verdict','#ob-vtext','warn','CDC: the order committed to the DB; a change-data-capture reader will tail the DB\'s WAL and emit the event — no app-level outbox table. Restart →'); } };
+  $('#ob-relay').onclick=()=>{ broker=1; ship=1; if(mode==='outbox') outbox='event#1 (sent ✓)'; paint();
+    verdict('#ob-verdict','#ob-vtext','ok',`${mode==='cdc'?'CDC tailed the committed change':'Relay replayed the outbox'} → event published (at-least-once), shipment created. State and event now agree; dedupe by id gives effectively-once.`); };
+  $('#ob-reset').onclick=reset; setM('dual');
+})();
+
+/* ══ 10 · EVENT SOURCING ══ */
+(function(){
+  const POOL=['milk','eggs','bread','coffee','apples','butter']; let log, snapAt, snapState, ver;
+  function reset(){ log=[]; snapAt=0; snapState=[]; ver=0; paint('Add/remove items, then rebuild by replay and snapshot.','warn'); }
+  function fold(events){ const s=[]; for(const e of events){ if(e.t==='add') s.push(e.item); else if(e.t==='rem'){ const i=s.indexOf(e.item); if(i>=0) s.splice(i,1); } } return s; }
+  function paint(msg,kind){ $('#es-log').innerHTML=log.length? log.map(e=>`<span class="msg">${e.t==='add'?'+':'−'}${e.item} <span style="opacity:.5">v${e.v}</span></span>`).join('') : '<span class="msg" style="opacity:.5">(empty)</span>';
+    const st=fold(log); $('#es-state').innerHTML=st.length? st.map(i=>`<span class="msg done">${i}</span>`).join('') : '<span class="msg" style="opacity:.5">(empty cart)</span>';
+    if(msg) verdict('#es-verdict','#es-vtext',kind||'warn',msg); }
+  $('#es-add').onclick=()=>{ const used=fold(log); const item=POOL.find(p=>!used.includes(p))||POOL[log.length%POOL.length]; log.push({t:'add',item,v:++ver}); paint(`Appended <b>ItemAdded(${item})</b>. State is the fold of the log.`,'ok'); };
+  $('#es-remove').onclick=()=>{ const st=fold(log); if(!st.length){ paint('Cart empty — add first.','warn'); return; } const item=st[st.length-1]; log.push({t:'rem',item,v:++ver}); paint(`Appended <b>ItemRemoved(${item})</b> — the old event stays; state is re-derived.`,'ok'); };
+  $('#es-rebuild').onclick=()=>{ const st=fold(log); paint(`Threw away the in-memory state and <b>rebuilt it by replaying ${log.length} events</b> → identical cart. That's the defining property.`,'ok'); };
+  $('#es-snap').onclick=()=>{ snapAt=log.length; snapState=fold(log); paint(`📸 Snapshot at version ${ver} (${snapState.length} items). A future rebuild loads this + replays only events after it — bounding replay cost.`,'ok'); };
+  $('#es-reset').onclick=reset; reset();
+})();
+
+/* ══ 11 · CQRS ══ */
+(function(){
+  let events, counter, board, projLag;
+  function reset(){ events=[]; counter={}; board=[]; projLag=[]; paintWrite(); paintRead(); verdict('#cq-verdict','#cq-vtext','warn','Like a post, then immediately query — see the stale read, then convergence.'); }
+  function paintWrite(){ $('#cq-write').innerHTML=events.length? events.slice(-8).map(e=>`Liked(${e.post})`).join('<br>') : '—'; }
+  function project(){ while(projLag.length){ const e=projLag.shift(); counter[e.post]=(counter[e.post]||0)+1; } board=Object.entries(counter).sort((a,b)=>b[1]-a[1]); }
+  function paintRead(){ $('#cq-readm').innerHTML = `<div style="margin-bottom:6px"><b>per-post counter</b><br>${Object.keys(counter).length?Object.entries(counter).map(([p,c])=>`${p}: ${c}`).join('<br>'):'—'}</div><div><b>leaderboard</b><br>${board.length?board.map(([p,c],i)=>`${i+1}. ${p} (${c})`).join('<br>'):'—'}</div>`; }
+  $('#cq-like').onclick=()=>{ const post='post:'+(1+events.length%3); events.push({post}); paintWrite();
+    if($('#cq-async').checked){ projLag.push({post}); setTimeout(()=>{ project(); paintRead(); }, reduceMotion?0:900); }
+    else { projLag.push({post}); project(); paintRead(); }
+    verdict('#cq-verdict','#cq-vtext','warn',`Wrote Liked(${post}). ${$('#cq-async').checked?'Projection is async — query NOW to catch the read-lag window.':'Projection is synchronous — read model already updated.'}`); };
+  $('#cq-read').onclick=()=>{ const pending=projLag.length; paintRead();
+    if(pending>0) verdict('#cq-verdict','#cq-vtext','bad',`Read models are <b>stale</b> — ${pending} event(s) not yet projected (the read-lag window). They'll converge once the projector catches up.`);
+    else verdict('#cq-verdict','#cq-vtext','ok','Read models are caught up — the query returns the denormalized answer with no joins.'); };
+  $('#cq-rebuild').onclick=()=>{ counter={}; board=[]; for(const e of events) counter[e.post]=(counter[e.post]||0)+1; board=Object.entries(counter).sort((a,b)=>b[1]-a[1]); projLag=[]; paintRead();
+    verdict('#cq-verdict','#cq-vtext','ok',`Rebuilt the read models from scratch by <b>replaying all ${events.length} events</b> — this is how you add a new projection later and backfill it.`); };
+  $('#cq-reset').onclick=reset; $('#cq-async').onchange=reset; reset();
+})();
+</script>
+</body>
+</html>

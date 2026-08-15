@@ -15,9 +15,15 @@
     "phase6": "node src/phase6/streaming.ts",
     "phase7": "node src/phase7/pubsub.ts",
     "phase8": "node src/phase8/priority.ts",
+    "phase9": "node src/phase9/outbox-cdc.ts",
+    "phase10": "node src/phase10/event-sourcing.ts",
+    "phase11": "node src/phase11/cqrs.ts",
+    "phase12": "node src/phase12/backpressure.ts",
     "app:server": "node src/app/server.ts",
     "app:worker": "node src/app/worker.ts",
     "app:target": "node src/app/test-target.ts",
+    "web": "node web/serve.mjs",
+    "deploy": "npx wrangler pages deploy web --project-name messaging-queues",
     "typecheck": "tsc --noEmit"
   },
   "devDependencies": {
