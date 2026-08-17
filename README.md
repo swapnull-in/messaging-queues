@@ -42,6 +42,7 @@ Run them in order. Each one prints a timestamped log so you can watch what happe
 | `npm run phase10` | **Event sourcing** — state is a fold of events; replay, time-travel, snapshots |
 | `npm run phase11` | **CQRS** — split writes from reads; many read models; the read-lag window |
 | `npm run phase12` | **Backpressure** — a fast producer vs a slow consumer; block, shed, or scale |
+| `npm run phase13` | **Exactly-once purchase** — the capstone: idempotency keys + outbox + reconciliation, end to end *(Deep Dive 23)* |
 
 The code in `src/phase1/queue.ts` is the one to read first — it's the whole
 queue engine in ~150 commented lines.
@@ -148,6 +149,14 @@ src/
 web/
   index.html  ·  serve.mjs   (the interactive Queue Lab — npm run web)
 ```
+
+## Drill & study guide
+
+The web lab has a **Drill** tab — the matching study module's interview questions
+and cheat-sheet one-liners as click-to-reveal cards (active recall: answer out
+loud before revealing). [`STUDY-GUIDE.md`](STUDY-GUIDE.md) maps every phase to
+the exact module section it implements, with the staff-level insight quoted, and
+points to the deep dives to read next.
 
 ## License
 

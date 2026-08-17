@@ -19,6 +19,7 @@
     "phase10": "node src/phase10/event-sourcing.ts",
     "phase11": "node src/phase11/cqrs.ts",
     "phase12": "node src/phase12/backpressure.ts",
+    "phase13": "node src/phase13/exactly-once-purchase.ts",
     "app:server": "node src/app/server.ts",
     "app:worker": "node src/app/worker.ts",
     "app:target": "node src/app/test-target.ts",

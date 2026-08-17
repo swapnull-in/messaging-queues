@@ -151,7 +151,7 @@
   <aside class="sidebar" id="sidebar">
     <div class="brand"><span class="glyph">⇉</span><span class="wm"><b>Queue Lab</b><span>Messaging</span></span></div>
     <nav class="nav" id="nav" aria-label="Lessons"></nav>
-    <div class="side-foot">Every panel is also a runnable <code style="font-size:10px">npm run phaseN</code>.<br /><a href="https://github.com/swapnull-in/messaging-queues" target="_blank" rel="noopener">View source ↗</a></div>
+    <div class="side-foot">Every panel is also a runnable <code style="font-size:10px">npm run phaseN</code>.<br /><a href="https://github.com/swapnull-in/messaging-queues" target="_blank" rel="noopener">View source ↗</a> · <a href="https://system-design-labs.pages.dev" target="_blank" rel="noopener">all 10 labs ↗</a></div>
   </aside>
   <div class="backdrop" id="backdrop"></div>
   <main class="main">
@@ -479,11 +479,40 @@
       </div></div>
     </section>
 
+    <!-- 13 · EXACTLY-ONCE PURCHASE -->
+    <section class="phase" data-tab="13 · Exactly-once purchase">
+      <h2>Exactly-once purchase — the capstone</h2>
+      <p class="lede">A user clicks Buy once; money must move once — through double-clicks, lost responses, and an
+        ambiguous payment-provider timeout. The composition: a client <strong>idempotency key</strong> with a stored
+        response, a provider-side derived key, and the <strong>outbox</strong> to downstream fulfillment.
+        <em>(Deep Dive 23 · <code>npm run phase13</code>)</em></p>
+      <div class="card"><div class="lab">
+        <div class="controls">
+          <label class="toggle"><input type="checkbox" id="eop-idem" checked /> Idempotency key + stored response</label>
+          <button class="act" id="eop-buy">🛒 Buy once — with full network chaos</button>
+          <div class="verdict" id="eop-verdict"><span class="dot"></span><span id="eop-vtext">Chaos = double-click, a lost response forcing a retry, and a PSP timeout.</span></div>
+        </div>
+        <div class="stage">
+          <div style="display:flex;gap:18px;flex-wrap:wrap;font-family:var(--mono)">
+            <div><div style="font-size:24px" id="eop-charges">—</div><div style="font-size:10px;color:var(--muted);text-transform:uppercase">charges</div></div>
+            <div><div style="font-size:24px" id="eop-ledger">—</div><div style="font-size:10px;color:var(--muted);text-transform:uppercase">ledger rows</div></div>
+            <div><div style="font-size:24px" id="eop-ship">—</div><div style="font-size:10px;color:var(--muted);text-transform:uppercase">fulfillments</div></div>
+          </div>
+          <div class="log-list" id="eop-log" style="font-family:var(--mono);font-size:12px;line-height:1.7">—</div>
+          <p class="proof"><b>The proof:</b> three attempts hit the server (double-click + a retry whose original response
+            was lost) and the PSP call times out ambiguously once — yet with the idempotency key every retry
+            <b>replays the stored receipt</b> instead of re-charging, the derived key makes the PSP retry safe, and the
+            outbox delivers fulfillment exactly-once-by-effect. Turn the key off and watch the duplicates land.</p>
+        </div>
+      </div></div>
+    </section>
     <div class="side-foot" style="margin-top:24px; padding-top:22px; border-top:1px solid var(--line); text-align:center">Browser port of the <code style="font-size:10px">src/phase*</code> scripts · same mechanics · MIT</div>
     </div><!-- /main-inner -->
   </main>
 </div>
 
+<script src="drill-data.js"></script>
+<script src="drill.js"></script>
 <script>
 const sections = [...document.querySelectorAll('section.phase')];
 const navEl = document.getElementById('nav'), appEl = document.getElementById('app');
@@ -492,6 +521,8 @@ const slug = s => s.dataset.tab.toLowerCase().replace(/[^a-z0-9]+/g,'-').replace
 const reduceMotion = matchMedia('(prefers-reduced-motion: reduce)').matches;
 const closeNav = () => appEl.classList.remove('nav-open');
 const TIER_OF = {
+  'drill':'Practice',
+  '13-exactly-once-purchase':'Deep dives',
   'overview':'Overview',
   '1-queue':'Queue & delivery', '3-idempotency':'Queue & delivery', '2-retry-backoff':'Queue & delivery', '8-priority':'Queue & delivery',
   '4-rate-limit':'Flow control', '12-backpressure':'Flow control',
@@ -707,6 +738,29 @@ function verdict(sel,tsel,kind,text){ const v=$(sel); v.className='verdict '+kin
   $('#cq-rebuild').onclick=()=>{ counter={}; board=[]; for(const e of events) counter[e.post]=(counter[e.post]||0)+1; board=Object.entries(counter).sort((a,b)=>b[1]-a[1]); projLag=[]; paintRead();
     verdict('#cq-verdict','#cq-vtext','ok',`Rebuilt the read models from scratch by <b>replaying all ${events.length} events</b> — this is how you add a new projection later and backfill it.`); };
   $('#cq-reset').onclick=reset; $('#cq-async').onchange=reset; reset();
+})();
+/* ══ 13 · EXACTLY-ONCE PURCHASE ══ */
+(function(){
+  var v=document.getElementById('eop-verdict'), vt=document.getElementById('eop-vtext');
+  document.getElementById('eop-buy').onclick=function(){
+    var idem=document.getElementById('eop-idem').checked;
+    var charges=0, ledger=0, ship=0, seen={}, logs=[];
+    var attempts=[['attempt 1 (click)',false],['attempt 2 (double-click)',false],['attempt 3 (retry: response lost)',true]];
+    attempts.forEach(function(a){
+      var key='idem_9f2c';
+      if(idem && seen[key]){ logs.push(a[0]+' → key seen → replay stored receipt (no new charge)'); return; }
+      charges++; ledger++; ship++; if(idem) seen[key]=true;
+      logs.push(a[0]+' → charged $49 · outbox → fulfillment'+(a[1]?' · response LOST → client will retry':''));
+    });
+    logs.push('PSP timeout on charge → retried with derived key → PSP deduped (no double capture)');
+    document.getElementById('eop-charges').textContent=charges;
+    document.getElementById('eop-charges').style.color=charges===1?'var(--good)':'var(--bad)';
+    document.getElementById('eop-ledger').textContent=ledger;
+    document.getElementById('eop-ship').textContent=ship;
+    document.getElementById('eop-log').innerHTML=logs.join('<br>');
+    if(charges===1){ v.className='verdict ok'; vt.innerHTML='Invariants hold: <b>1 charge, 1 ledger row, 1 fulfillment</b> — every duplicate replayed the receipt.'; }
+    else { v.className='verdict bad'; vt.innerHTML='<b>'+charges+' charges</b> for one click — no idempotency key means every retry is a new purchase.'; }
+  };
 })();
 </script>
 </body>
