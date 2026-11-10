@@ -1,6 +1,6 @@
 # Study Guide — Messaging & Event-Driven Systems
 
-This repo is the runnable half of **Core Course/04-messaging-event-driven.md**: every concept the module argues in prose, a phase here demonstrates in a script you can run, read, and break. Study loop: read the module section, run the matching phase (`npm run phaseN`), read its heavily commented source top to bottom, then drill the flashcards in the web lab (`npm run web`) until the staff-level one-liners are automatic. Phases 2, 5, 6, and 7 use real infrastructure (Redis/BullMQ, RabbitMQ, Kafka/Redpanda, Redis Pub/Sub); everything else runs on plain Node.
+This repo is the runnable half of **[Core Course/04-messaging-event-driven.md](https://github.com/swapnull-in/system-design/blob/main/Core%20Course/04-messaging-event-driven.md)**: every concept the module argues in prose, a phase here demonstrates in a script you can run, read, and break. Study loop: read the module section, run the matching phase (`npm run phaseN`), read its heavily commented source top to bottom, then drill the flashcards in the web lab (`npm run web`) until the staff-level one-liners are automatic. Phases 2, 5, 6, and 7 use real infrastructure (Redis/BullMQ, RabbitMQ, Kafka/Redpanda, Redis Pub/Sub); everything else runs on plain Node.
 
 ## Phase → Module map
 
@@ -22,8 +22,8 @@ This repo is the runnable half of **Core Course/04-messaging-event-driven.md**: 
 
 ## Go deeper
 
-- **Deep Dives/02-kafka.md** — the full Kafka internals story (ISR, EOS, compaction, rebalancing) beyond what Phase 6 demonstrates.
-- **Deep Dives/32-design-message-queue.md** — design the broker itself: what Phase 1's 150-line queue looks like at distributed, production scale.
-- **Deep Dives/33-messaging-mastery-bar.md** — the self-test: what a staff-level messaging answer must contain before you're done with this module.
-- **Deep Dives/19-pattern-long-running-tasks.md** — the async job pattern the capstone app implements (accept fast, 202, poll status), generalized.
-- **Deep Dives/23-exactly-once-purchase.md** — Phase 3 + Phase 9 combined into one end-to-end problem: a payment that must happen effectively once.
+- **[Deep Dives/02-kafka.md](https://github.com/swapnull-in/system-design/blob/main/Deep%20Dives/02-kafka.md)** — the full Kafka internals story (ISR, EOS, compaction, rebalancing) beyond what Phase 6 demonstrates.
+- **[Deep Dives/32-design-message-queue.md](https://github.com/swapnull-in/system-design/blob/main/Deep%20Dives/32-design-message-queue.md)** — design the broker itself: what Phase 1's 150-line queue looks like at distributed, production scale.
+- **[Deep Dives/33-messaging-mastery-bar.md](https://github.com/swapnull-in/system-design/blob/main/Deep%20Dives/33-messaging-mastery-bar.md)** — the self-test: what a staff-level messaging answer must contain before you're done with this module.
+- **[Deep Dives/19-pattern-long-running-tasks.md](https://github.com/swapnull-in/system-design/blob/main/Deep%20Dives/19-pattern-long-running-tasks.md)** — the async job pattern the capstone app implements (accept fast, 202, poll status), generalized.
+- **[Deep Dives/23-exactly-once-purchase.md](https://github.com/swapnull-in/system-design/blob/main/Deep%20Dives/23-exactly-once-purchase.md)** — Phase 3 + Phase 9 combined into one end-to-end problem: a payment that must happen effectively once.
