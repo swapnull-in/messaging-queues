@@ -22,7 +22,7 @@
  * each subscriber needs its own connection. That's why we make several.
  */
 
-import Redis from "ioredis";
+import { Redis } from "ioredis";
 import { log } from "../phase1/queue.ts";
 
 const sleep = (ms: number) => new Promise((r) => setTimeout(r, ms));
